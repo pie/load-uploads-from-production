@@ -9,5 +9,7 @@
             "email": "dev@pie.co.de"
         }
     ],
-    "require": {}
+    "require": {
+        "yahnis-elsts/plugin-update-checker": "^4.11"
+    }
 }

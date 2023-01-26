@@ -64,3 +64,23 @@ jobs:
           tag: ${{ needs.check_for_release.outputs.version }}
           name: ${{ needs.check_for_release.outputs.version }}
           body: ${{ needs.check_for_release.outputs.release_body }}
+
+      
+      - name: RSync release-data.json
+        run: rsync -e "ssh -i /home/runner/.ssh/github_actions" release-data.json ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_DIR }}
+
+      # Zip local env, excluding certain files (git related)
+      - name: Archive Release
+        uses: thedoctor0/zip-release@main
+        with:
+          directory: ..
+          filename: 'load-uploads-from-production.zip'
+          exclusions: 'load-uploads-from-production/*.git* load-uploads-from-production/package*.json load-uploads-from-production/composer.* load-uploads-from-production/README.* load-uploads-from-production/release-data.json load-uploads-from-production/__TEMP* readme.txt'
+
+      - name: Copy README.md to readme.txt
+        run: cp README.md readme.txt
+
+      - name: RSync publish theme zip to hosting
+        run: |
+          rsync -e "ssh -i /home/runner/.ssh/github_actions" ../load-uploads-from-production.zip ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_DIR }}
+          rsync -e "ssh -i /home/runner/.ssh/github_actions" ../readme.txt ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_DIR }}
