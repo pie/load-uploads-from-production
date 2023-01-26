@@ -1,0 +1,13 @@
+{
+    "name": "pie/load-uploads-from-production",
+    "description": "This plugin overwrites attachment URLs with the production site if they are not found on the staging site.",
+    "type": "wordpress-plugin",
+    "license": "GPL",
+    "authors": [
+        {
+            "name": "The team at PIE",
+            "email": "dev@pie.co.de"
+        }
+    ],
+    "require": {}
+}
