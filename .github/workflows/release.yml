@@ -75,9 +75,6 @@ jobs:
             chmod 600 /home/runner/.ssh/github_actions
             ssh-agent -a $SSH_AUTH_SOCK > /dev/null
             ssh-add /home/runner/.ssh/github_actions
-      
-      - name: RSync release-data.json
-        run: rsync -e "ssh -i /home/runner/.ssh/github_actions" release-data.json ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_DIR }}
 
       # Zip local env, excluding certain files (git related)
       - name: Archive Release
@@ -90,7 +87,8 @@ jobs:
       - name: Copy README.md to readme.txt
         run: cp README.md readme.txt
 
-      - name: RSync publish theme zip to hosting
+      - name: RSync publish theme zip and related files to hosting
         run: |
           rsync -e "ssh -i /home/runner/.ssh/github_actions" ../load-uploads-from-production.zip ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_DIR }}
           rsync -e "ssh -i /home/runner/.ssh/github_actions" ../readme.txt ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_DIR }}
+          rsync -e "ssh -i /home/runner/.ssh/github_actions" release-data.json ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_DIR }}
