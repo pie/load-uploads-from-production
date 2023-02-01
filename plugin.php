@@ -1,5 +1,4 @@
 <?php
-
 /*
 Plugin Name: Load Uploads From Production
 Description: This plugin overwrites attachment URLs with the production site if they are not found on the staging site. Please de-activate in production.
@@ -154,9 +153,7 @@ function textbox_callback()
  */
 function cache_clear_button_callback()
 {
-    // echo '<button type="button" id="view-cache-button" class="button-primary" style="margin-right: 1rem">View Cache</button>';
     echo '<button type="button" id="clear-cache-button" class="button">Clear Cache</button>';
-
 }
 
 /**
