@@ -10,11 +10,71 @@ Author URI: http://pie.co.de
 
 namespace PIE\LoadUploadsFromProduction;
 
+use \Exception;
+
 const PROD_URL_SETTING_ID = __NAMESPACE__ . ':production_url';
 const PROD_IMG_URL_CACHE_ID = __NAMESPACE__ . ':cached_image_urls';
+const CLEAR_PROD_IMG_URL_CACHE_ID = __NAMESPACE__ . ':clear_image_urls_cache';
 
 add_action('admin_init', __NAMESPACE__ . '\hookup_setting_field');
 add_action('init', __NAMESPACE__ . '\maybe_hookup_uploads_filter');
+add_action('init', __NAMESPACE__ . '\enqueue_scripts');
+
+/**
+ * Enqueues scripts
+ *
+ * @hooked init @10
+ * @return void
+ */
+function enqueue_scripts()
+{
+    wp_enqueue_script(
+        $handle = 'load-uploads-from-production-js',
+        $src = plugin_dir_url(__FILE__) . '/js/admin.js',
+        $deps = ['jquery'],
+        $ver = filemtime(plugin_dir_path(__FILE__) . '/js/admin.js'),
+        $in_footer = true
+    );
+    wp_localize_script(
+        $handle = 'load-uploads-from-production-js',
+        $object_name = 'ajax_obj',
+        $l10n = [
+            'ajax_url' => admin_url('admin-ajax.php')
+        ]
+    );
+
+    add_action('wp_ajax_lufp_clear_image_cache', __NAMESPACE__ . '\maybe_clear_image_cache');
+}
+
+/**
+ * Ajax action to try clear image cahce
+ */
+function maybe_clear_image_cache()
+{
+    try {
+        $cache = get_option(PROD_IMG_URL_CACHE_ID);
+        $cache_size = is_array($cache) ? sizeof($cache) : 0;
+        $updated = update_option(PROD_IMG_URL_CACHE_ID, []);
+        
+        if ($cache_size < 1) {
+            throw new Exception("There was no cache to clear", 1);
+        }
+        if (!$updated) {
+            throw new Exception("Internal error. Please try again or seek admin assistance", 2);
+        }
+        wp_send_json_success([
+            'success' => true,
+            'cache' => $cache,
+            'items_cleared' => $cache_size
+            ], 200);
+    } catch (\Exception $ex) {
+        wp_send_json_error([
+            'success' => false,
+            'message' => $ex->getMessage(),
+            'errCode' => $ex->getCode()
+        ]);
+    }
+}
 
 
 /**
@@ -48,10 +108,15 @@ function maybe_hookup_uploads_filter()
  */
 function hookup_setting_field()
 {
-    register_setting('general', PROD_URL_SETTING_ID, [
-        'type' => 'string',
-        'sanitize_callback' => 'sanitize_url',
-        ]);
+    register_setting(
+        'general',
+        PROD_URL_SETTING_ID,
+        [
+            'type' => 'string',
+            'sanitize_callback' => 'sanitize_url',
+        ]
+    );
+
 
     add_settings_field(
         PROD_URL_SETTING_ID,
@@ -60,6 +125,15 @@ function hookup_setting_field()
         'general',
         'default'
     );
+    
+    add_settings_field(
+        CLEAR_PROD_IMG_URL_CACHE_ID,
+        'Image Cache',
+        __NAMESPACE__ . '\cache_clear_button_callback',
+        'general',
+        'default'
+    );
+
 }
 
 /**
@@ -71,6 +145,18 @@ function textbox_callback()
 {
     $production_url_value = get_option(PROD_URL_SETTING_ID) ?: '';
     echo sprintf(file_get_contents(plugin_dir_path(__FILE__) . 'templates/production-url-field.html'), PROD_URL_SETTING_ID, $production_url_value);
+}
+
+/**
+ * Outputs the HTML for the Cache Clear button
+ *
+ * @return void
+ */
+function cache_clear_button_callback()
+{
+    // echo '<button type="button" id="view-cache-button" class="button-primary" style="margin-right: 1rem">View Cache</button>';
+    echo '<button type="button" id="clear-cache-button" class="button">Clear Cache</button>';
+
 }
 
 /**
@@ -95,7 +181,8 @@ function replace_home_url_with_production($src)
         } else {
             $file_headers = @get_headers($src[0]);
             if ($file_headers[0] == 'HTTP/1.1 404 Not Found') {
-                    $src[0] = str_replace(home_url(), PROD_URL_SETTING_ID, $src[0]);
+                $src[0] = str_replace(home_url(), PROD_URL_SETTING_ID, $src[0]);
+
             }
             $cache[$src[0]] = $src[0];
             update_option(PROD_IMG_URL_CACHE_ID, $cache);
