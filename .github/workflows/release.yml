@@ -64,3 +64,31 @@ jobs:
           tag: ${{ needs.check_for_release.outputs.version }}
           name: ${{ needs.check_for_release.outputs.version }}
           body: ${{ needs.check_for_release.outputs.release_body }}
+
+      - name: Add SSH key for RSyncs
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        run: |
+            mkdir -p /home/runner/.ssh
+            ssh-keyscan ${{ secrets.SSH_HOST }} >> /home/runner/.ssh/known_hosts
+            echo "${{ secrets.SSH_PRIVATE_KEY }}" > /home/runner/.ssh/github_actions
+            chmod 600 /home/runner/.ssh/github_actions
+            ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+            ssh-add /home/runner/.ssh/github_actions
+
+      # Zip local env, excluding certain files (git related)
+      - name: Archive Release
+        uses: thedoctor0/zip-release@main
+        with:
+          directory: ..
+          filename: 'load-uploads-from-production.zip'
+          exclusions: 'load-uploads-from-production/*.git* load-uploads-from-production/package*.json load-uploads-from-production/composer.* load-uploads-from-production/README.* load-uploads-from-production/release-data.json load-uploads-from-production/__TEMP* readme.txt'
+
+      - name: Copy README.md to readme.txt
+        run: cp README.md readme.txt
+
+      - name: RSync publish theme zip and related files to hosting
+        run: |
+          rsync -e "ssh -i /home/runner/.ssh/github_actions" ../load-uploads-from-production.zip ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_DIR }}
+          rsync -e "ssh -i /home/runner/.ssh/github_actions" ../readme.txt ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_DIR }}
+          rsync -e "ssh -i /home/runner/.ssh/github_actions" release-data.json ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_DIR }}

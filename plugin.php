@@ -76,6 +76,17 @@ function maybe_clear_image_cache()
     }
 }
 
+
+/**
+ * Load Composer autoloader
+ */
+require plugin_dir_path(__FILE__) . '/vendor/autoload.php';
+$update_checker = \Puc_v4_Factory::buildUpdateChecker(
+    'http://212.71.239.229/releases/plugins/load-uploads-from-production/release-data.json',
+    __FILE__,
+    'load-uploads-from-production'
+);
+
 /**
  * Checks to see if we're on the production site, and if not we hook up the filter
  *
@@ -106,6 +117,7 @@ function hookup_setting_field()
         ]
     );
 
+
     add_settings_field(
         PROD_URL_SETTING_ID,
         'Production Address (URL)',
@@ -121,6 +133,7 @@ function hookup_setting_field()
         'general',
         'default'
     );
+
 }
 
 /**
@@ -143,6 +156,7 @@ function cache_clear_button_callback()
 {
     // echo '<button type="button" id="view-cache-button" class="button-primary" style="margin-right: 1rem">View Cache</button>';
     echo '<button type="button" id="clear-cache-button" class="button">Clear Cache</button>';
+
 }
 
 /**
@@ -168,6 +182,7 @@ function replace_home_url_with_production($src)
             $file_headers = @get_headers($src[0]);
             if ($file_headers[0] == 'HTTP/1.1 404 Not Found') {
                 $src[0] = str_replace(home_url(), PROD_URL_SETTING_ID, $src[0]);
+
             }
             $cache[$src[0]] = $src[0];
             update_option(PROD_IMG_URL_CACHE_ID, $cache);
