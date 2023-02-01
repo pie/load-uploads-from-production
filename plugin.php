@@ -2,7 +2,7 @@
 /*
 Plugin Name: Load Uploads From Production
 Description: This plugin overwrites attachment URLs with the production site if they are not found on the staging site. Please de-activate in production.
-Version: 1.1.0
+Version: 1.1.1
 Author: The team at PIE
 Author URI: http://pie.co.de
 */
